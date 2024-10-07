@@ -1,27 +1,40 @@
-# Vector Inference: Easy inference on Slurm clusters
-This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the Vector Institute cluster environment**. To adapt to other environments, update [`launch_server.sh`](vec_inf/launch_server.sh), [`vllm.slurm`](vec_inf/vllm.slurm), [`multinode_vllm.slurm`](vec_inf/multinode_vllm.slurm) and [`models.csv`](vec_inf/models/models.csv) accordingly.
+# TACC Inference: Easy inference on Slurm clusters
+This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the ~~Vector Institute~~ TACC cluster environment**. 
+
+There is no LICENSE on the `VectorInstitute/vector-inference` repo but all credits go to the authors of `https://github.com/VectorInstitute/vector-inference`.
 
 ## Installation
-If you are using the Vector cluster environment, and you don't need any customization to the inference server environment, run the following to install package:
+
+Clone this repo and install the pip package. I can register this with pypi if there is enough interest.
 ```bash
-pip install vec-inf
+# I'm using miniconda; feel free to use your favourite package manager.
+# I'm assuming you've already made the directories. Use `mkdir -p <name>` otherwise
+$ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O $WORK/vista/bin/miniconda3/miniconda.sh
+$ bash $WORK/vista/bin/miniconda3/miniconda.sh -u -p $WORK/vista/bin/miniconda3
+(base) $ git clone <this repo>
+(base) $ cd <repo directory>
+(base) $ pip install .
+(base) $ tacc-inf --help
 ```
-Otherwise, we recommend using the provided [`Dockerfile`](Dockerfile) to set up your own environment with the package
+
+> [!NOTE]  
+> The rest of the README is unmodified. Visit [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference) for an up to date README.
+
 
 ## Launch an inference server
 We will use the Llama 3.1 model as example, to launch an OpenAI compatible inference server for Meta-Llama-3.1-8B-Instruct, run:
 ```bash
-vec-inf launch Meta-Llama-3.1-8B-Instruct
+tacc-inf launch Meta-Llama-3.1-8B-Instruct
 ```
 You should see an output like the following:
 
 <img width="400" alt="launch_img" src="https://github.com/user-attachments/assets/557eb421-47db-4810-bccd-c49c526b1b43">
 
-The model would be launched using the [default parameters](vec_inf/models/models.csv), you can override these values by providing additional options, use `--help` to see the full list. You can also launch your own customized model as long as the model architecture is [supported by vLLM](https://docs.vllm.ai/en/stable/models/supported_models.html), you'll need to specify all model launching related options to run a successful run.
+The model would be launched using the [default parameters](tacc_inf/models/models.csv), you can override these values by providing additional options, use `--help` to see the full list. You can also launch your own customized model as long as the model architecture is [supported by vLLM](https://docs.vllm.ai/en/stable/models/supported_models.html), you'll need to specify all model launching related options to run a successful run.
 
 You can check the inference server status by providing the Slurm job ID to the `status` command:
 ```bash
-vec-inf status 13014393
+tacc-inf status 13014393
 ```
 
 You should see an output like the following:
@@ -40,20 +53,20 @@ Note that the base URL is only available when model is in `READY` state, and if 
 
 Finally, when you're finished using a model, you can shut it down by providing the Slurm job ID:
 ```bash
-vec-inf shutdown 13014393
+tacc-inf shutdown 13014393
 
 > Shutting down model with Slurm Job ID: 13014393
 ```
 
 You call view the full list of available models by running the `list` command:
 ```bash
-vec-inf list
+tacc-inf list
 ```
 <img width="1200" alt="list_img" src="https://github.com/user-attachments/assets/a4f0d896-989d-43bf-82a2-6a6e5d0d288f">
 
 You can also view the default setup for a specific supported model by providing the model name, for example `Meta-Llama-3.1-70B-Instruct`:
 ```bash
-vec-inf list Meta-Llama-3.1-70B-Instruct
+tacc-inf list Meta-Llama-3.1-70B-Instruct
 ```
 <img width="400" alt="list_model_img" src="https://github.com/user-attachments/assets/5dec7a33-ba6b-490d-af47-4cf7341d0b42">
 

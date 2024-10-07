@@ -59,15 +59,15 @@ RUN poetry config virtualenvs.create false
 # Update Poetry lock file if necessary
 RUN poetry lock
 
-# Install vec-inf
-RUN python3.10 -m pip install vec-inf[dev]
+# Install tacc-inf
+RUN python3.10 -m pip install tacc-inf[dev]
 
 # Install Flash Attention 2 backend
 RUN python3.10 -m pip install flash-attn --no-build-isolation
 
 # Move nccl to accessible location
-RUN mkdir -p /vec-inf/nccl
-RUN mv /root/.config/vllm/nccl/cu12/libnccl.so.2.18.1 /vec-inf/nccl/libnccl.so.2.18.1;
+RUN mkdir -p /tacc-inf/nccl
+RUN mv /root/.config/vllm/nccl/cu12/libnccl.so.2.18.1 /tacc-inf/nccl/libnccl.so.2.18.1;
 
 # Set the default command to start an interactive shell
 CMD ["bash"]

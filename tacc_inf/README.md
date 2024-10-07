@@ -1,4 +1,4 @@
-# `vec-inf` Commands
+# `tacc-inf` Commands
 
 * `launch`: Specify a model family and other optional parameters to launch an OpenAI compatible inference server, `--json-mode` supported. Check [`here`](./models/README.md) for complete list of available options.
 * `list`: List all available model names, `--json-mode` supported.

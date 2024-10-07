@@ -1,13 +1,13 @@
 #!bin/bash
 
 # Load python module if you are on Vector cluster and install poetry
-module load python/3.10.12
+module load python3/3.11.8
 pip install poetry
 
 # Optional: it's recommended to change the cache directory to somewhere in the scratch space to avoid
 # running out of space in your home directory, below is an example for the Vector cluster
-mkdir -p /scratch/ssd004/scratch/$(whoami)/poetry_cache
-export POETRY_CACHE_DIR=/scratch/ssd004/scratch/$(whoami)/poetry_cache
+mkdir -p $SCRATCH/poetry_cache
+export POETRY_CACHE_DIR=$SCRATCH/poetry_cache
 
 # To see if the cache directory is set correctly, run the following command
 # poetry config cache-dir
