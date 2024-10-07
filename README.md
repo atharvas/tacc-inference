@@ -18,7 +18,7 @@ $ bash $WORK/vista/bin/miniconda3/miniconda.sh -u -p $WORK/vista/bin/miniconda3
 ```
 
 > [!NOTE]  
-> The rest of the README is unmodified. Visit [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference) for an up to date README.
+> The rest of the README is unmodified from the [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference) README. The rest of the README will be updated once the code works for TACC.
 
 
 ## Launch an inference server
