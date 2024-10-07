@@ -1,7 +1,7 @@
 # TACC Inference: Easy inference on Slurm clusters
 This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the ~~Vector Institute~~ TACC cluster environment**. 
 
-There is no LICENSE on the `VectorInstitute/vector-inference` repo but all credits go to the authors of `https://github.com/VectorInstitute/vector-inference`.
+All credits go to the authors of `https://github.com/VectorInstitute/vector-inference`.
 
 ## Installation
 
