@@ -105,7 +105,6 @@ def launch(
                 renamed_arg = arg.replace("_", "-")
                 launch_cmd += f" --{renamed_arg} {locals()[arg]}"
 
-    import IPython; IPython.embed()
     output = utils.run_bash_command(launch_cmd)
 
     slurm_job_id = output.split(" ")[-1].strip().strip("\n")

@@ -82,7 +82,7 @@ export VLLM_MODEL_WEIGHTS="/model-weights/$JOB_NAME"
 # This is a hack for `vista.tacc.utexas.edu`. I ran:
 # $ module load cuda/11.8
 # $ echo $LD_LIBRARY_PATH
-export LD_LIBRARY_PATH="/opt/apps/cuda/11.8/lib64:/opt/apps/ucx/1.17.0/lib:/opt/apps/nvidia24/openmpi/5.0.5/lib:/home1/apps/nvidia/Linux_aarch64/24.7/compilers/extras/qd/lib:/home1/apps/nvidia/Linux_aarch64/24.7/compilers/lib"
+export LD_LIBRARY_PATH="/opt/apps/ucx/1.17.0/lib:/opt/apps/nvidia24/cuda12/openmpi/5.0.5/lib:/home1/apps/nvidia/Linux_aarch64/24.7/cuda/12.5/extras/CUPTI/lib64:/home1/apps/nvidia/Linux_aarch64/24.7/cuda/12.5/lib64:/home1/apps/nvidia/Linux_aarch64/24.7/compilers/extras/qd/lib:/home1/apps/nvidia/Linux_aarch64/24.7/compilers/lib"
 
 
 # ================================ Validate Inputs & Launch Server =================================
