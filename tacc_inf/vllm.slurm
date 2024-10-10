@@ -16,13 +16,12 @@ echo "Server address: http://${hostname}:${vllm_port_number}/v1"
 echo "http://${hostname}:${vllm_port_number}/v1" > ${VLLM_BASE_URL_FILENAME}
 
 # Activate vllm venv
-if [ "$VENV_BASE" = "singularity" ]; then
-    export SINGULARITY_IMAGE=/projects/aieng/public/vector-inference_0.3.0.sif
-    export VLLM_NCCL_SO_PATH=/vec-inf/nccl/libnccl.so.2.18.1
-    module load singularity-ce/3.8.2
-    singularity exec $SINGULARITY_IMAGE ray stop
-    singularity exec --nv --bind /model-weights:/model-weights $SINGULARITY_IMAGE \
-    python3.10 -m vllm.entrypoints.openai.api_server \
+if [ "$VENV_BASE" = "apptainer" ]; then
+    export SINGULARITY_IMAGE=$WORK/vista/tacc-inference/static/tacc_inf.sif
+    module load tacc-apptainer
+    apptainer exec $SINGULARITY_IMAGE ray stop
+    apptainer exec --nv --bind /model-weights:/model-weights $SINGULARITY_IMAGE \
+    python -m vllm.entrypoints.openai.api_server \
     --model ${VLLM_MODEL_WEIGHTS} \
     --served-model-name ${JOB_NAME} \
     --host "0.0.0.0" \
