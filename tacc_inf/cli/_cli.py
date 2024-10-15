@@ -119,7 +119,7 @@ def launch(
             key, value = line.split(": ")
             table.add_row(key, value)
             output_dict[key.lower().replace(" ", "_")] = value
-        except Exception as e:
+        except Exception:
             print(f"Ignoring Line `{line}'")
 
     if json_mode:
