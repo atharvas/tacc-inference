@@ -25,7 +25,7 @@ We run vLLM through a self-contained singularity container. There is a great doc
 
 
 ```bash
-# Option 1: Get atharvas vLLM Docker container.
+# Option 1: Get atharva's vLLM Docker container.
 $ ls /home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch64.sif
 # <should echo the path; if it gives an error I haven't set the permissions correctly and you should open a github issue.>
 $ cp /home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch64.sif static/llm-train-serve_aarch64.sif
@@ -34,8 +34,8 @@ $ cp /home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch
 $ cd static/
 # comission a node for 20 minutes
 $ idev -p gh-dev -N 1 -n 1 -t 00:20:00
-$ module load tacc-apptainer/1.3.3
-# build the apptainer config from the llm-train-serve github (build for GH100 with an aarch64 microarchitecture)
+$ module load tacc-apptainer
+# build the apptainer config from the llm-train-serve github (build for GH200 with an aarch64 microarchitecture but works for our machine as well)
 $ apptainer build llm-train-serve_aarch64.sif docker://ghcr.io/abacusai/gh200-llm/llm-train-serve@sha256:4ba3de6b19e8247ce5d351bf7dd41aa41bb3bffe8c790b7a2f4077af74c1b4ab
 # Confirm that the SIF file file is in $WORK/tacc-inference/static with this exact name.
 $ ls $WORK/tacc-inference/static
@@ -67,21 +67,78 @@ $ source activate $WORK/tacc-inference/vllm_env
 ```
 
 
+## Download a model
 
+> [!TIP]  
+> Downloading on your local machine and transferring to TACC with rsync/scp proves to be much faster than downloading on TACC directly.
 
-
-> [!NOTE]  
-> The rest of the README is unmodified from the [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference) README. The rest of the README will be updated once the code works for TACC.
-
+```bash
+# The vllm.slurm script expects models to be here
+$ mkdir -p $WORK/tacc-inference/model-weights
+# We're going to download the model from huggingface.
+$ pip install huggingface-hub
+$ huggingface-cli login
+# Assume we want to download and use Meta-Llama-3.1-8B-Instruct
+# First, verify that models.csv contains this model
+$ cat tacc_inf/models/models.csv | grep Meta-Llama-3.1-8B-Instruct
+# Make a folder to hold these model weights
+$ mkdir -p $WORK/tacc-inference/model-weights/Meta-Llama-3.1-8B-Instruct/
+# Download from huggingface.
+$ huggingface-cli download meta-llama/Llama-3.1-8B-Instruct --local-dir $WORK/tacc-inference/model-weights/Meta-Llama-3.1-8B-Instruct/
+```
 
 ## Launch an inference server
 We will use the Llama 3.1 model as example, to launch an OpenAI compatible inference server for Meta-Llama-3.1-8B-Instruct, run:
 ```bash
-tacc-inf launch Meta-Llama-3.1-8B-Instruct
+tacc-inf launch Meta-Llama-3.1-8B-Instruct --time 00:10:00
+Ignoring Line `'
+Ignoring Line `-----------------------------------------------------------------'
+Ignoring Line `          Welcome to the Vista Supercomputer                       '
+Ignoring Line `-----------------------------------------------------------------'
+Ignoring Line `'
+Ignoring Line `No reservation for this job'
+Ignoring Line `--> Verifying valid submit host (login1)...OK'
+Ignoring Line `--> Verifying valid jobname...OK'
+Ignoring Line `--> Verifying valid ssh keys...OK'
+Ignoring Line `--> Verifying access to desired queue (gh-dev)...OK'
+Ignoring Line `--> Checking available allocation (CGAI24022)...OK'
+Ignoring Line `--> Quotas are not currently enabled for filesystem /home1/08277/asehgal...OK'
+Ignoring Line `--> Verifying that quota for filesystem /work/08277/asehgal/vista is at 23.14% allocated...OK'
+┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Job Config    ┃ Value                      ┃
+┡━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Slurm Job ID  │ 51431                      │
+│ Job Name      │ Meta-Llama-3.1-8B-Instruct │
+│ Partition     │ gh-dev                     │
+│ Num Nodes     │ 1                          │
+│ GPUs per Node │ 1                          │
+│ QOS           │ m2                         │
+│ Walltime      │ 00:10:00                   │
+│ Data Type     │ auto                       │
+└───────────────┴────────────────────────────┘
+$ squeue -u asehgal
+             JOBID   PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+             51431      gh-dev Meta-Lla  asehgal  R       0:30      1 c609-002
+$ tail /home1/08277/asehgal/.tacc-inf-logs/Meta-Llama-3.1/Meta-Llama-3.1-8B-Instruct.51431.out
+INFO 10-15 08:58:41 launcher.py:28] Route: /version, Methods: GET
+INFO 10-15 08:58:41 launcher.py:28] Route: /v1/chat/completions, Methods: POST
+INFO 10-15 08:58:41 launcher.py:28] Route: /v1/completions, Methods: POST
+INFO 10-15 08:58:41 launcher.py:28] Route: /v1/embeddings, Methods: POST
+INFO 10-15 08:58:41 launcher.py:33] Launching Uvicorn with --limit_concurrency 32765. To avoid this limit at the expense of performance run with --disable-frontend-multiprocessing
+INFO 10-15 08:58:51 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 08:59:01 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 08:59:11 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 08:59:21 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 08:59:31 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+$ tacc-inf shutdown 51431
+Shutting down model with Slurm Job ID: 51431
+$ squeue -u asehgal
+             JOBID   PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
 ```
-You should see an output like the following:
 
-<img width="400" alt="launch_img" src="https://github.com/user-attachments/assets/557eb421-47db-4810-bccd-c49c526b1b43">
+> [!NOTE]  
+> The rest of the README is from the [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference) README.
+
 
 The model would be launched using the [default parameters](tacc_inf/models/models.csv), you can override these values by providing additional options, use `--help` to see the full list. You can also launch your own customized model as long as the model architecture is [supported by vLLM](https://docs.vllm.ai/en/stable/models/supported_models.html), you'll need to specify all model launching related options to run a successful run.
 
