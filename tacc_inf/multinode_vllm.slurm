@@ -12,7 +12,7 @@ source ${SRC_DIR}/find_port.sh
 
 if [ "$VENV_BASE" = "apptainer" ]; then
     export SINGULARITY_IMAGE=/home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch64.sif
-    export VLLM_NCCL_SO_PATH=/vec-inf/nccl/libnccl.so.2.18.1
+    export VLLM_NCCL_SO_PATH=/usr/lib/aarch64-linux-gnu/libnccl.so.2.22.3
     module load tacc-apptainer
     apptainer exec $SINGULARITY_IMAGE ray stop
 fi

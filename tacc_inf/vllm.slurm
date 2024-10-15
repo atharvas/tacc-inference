@@ -18,6 +18,7 @@ echo "http://${hostname}:${vllm_port_number}/v1" > ${VLLM_BASE_URL_FILENAME}
 # Activate vllm venv
 if [ "$VENV_BASE" = "apptainer" ]; then
     export SINGULARITY_IMAGE=/home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch64.sif
+    export VLLM_NCCL_SO_PATH=/usr/lib/aarch64-linux-gnu/libnccl.so.2.22.3
     module load tacc-apptainer
     apptainer exec $SINGULARITY_IMAGE ray stop
     apptainer exec --nv --bind $WORK/tacc-inference/model-weights:/model-weights $SINGULARITY_IMAGE \
