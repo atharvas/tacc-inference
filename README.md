@@ -32,7 +32,7 @@ $ cp /home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch
 
 # Option 2: Make the docker container yourself.
 $ cd static/
-# comission a node for 20 minutes
+# commission a node for 20 minutes
 $ idev -p gh-dev -N 1 -n 1 -t 00:20:00
 $ module load tacc-apptainer
 # build the apptainer config from the llm-train-serve github (build for GH200 with an aarch64 microarchitecture but works for our machine as well)
@@ -48,7 +48,7 @@ $ logout
 # https://docs.vllm.ai/en/stable/getting_started/installation.html#use-an-existing-pytorch-installation
 # Don't use the conda environment.
 $ conda deactivate
-# comission a node for 40 minutes as it might take longer
+# commission a node for 40 minutes as it might take longer
 $ idev -p gh-dev -N 1 -n 1 -t 00:40:00
 $ module load gcc/14.2.0  cuda/12.5
 $ module load python3
