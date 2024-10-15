@@ -1,8 +1,8 @@
 # TACC Inference: Easy inference on Slurm clusters
-This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the TACC cluster environment**. 
+This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the TACC cluster environment**.
 
-> [!Note]  
-> TACC-inference is a fork of  [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference). This is also a work in progress. Make sure to read the 
+> [!Note]
+> TACC-inference is a fork of  [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference). This is also a work in progress. Make sure to read the
 
 # Installation
 
@@ -25,7 +25,7 @@ Or alternatively if you wish to make changes to the tacc-inf package (highly lik
 ```
 
 
-## Install vLLM Singularity container. 
+## Install vLLM Singularity container.
 
 We won't directly install vLLM on TACC but rather run vLLM through a singularity container. This document explains how TACC interfaces with singularity [containers-at-tacc.readthedocs.io](https://containers-at-tacc.readthedocs.io/en/latest/singularity/01.singularity_basics.html). To get this container you have 3 options:
 
@@ -80,13 +80,13 @@ $ source activate $WORK/tacc-inference/vllm_env
 (vllm_env) $ pip install -r requirements-build.txt
 (vllm_env) $ pip install -e . --no-build-isolation
 (vllm_env) $ pip install tacc-inference
-# Integrate the source activate vllm_env call in the vllm.slurm files. 
+# Integrate the source activate vllm_env call in the vllm.slurm files.
 ```
 
 
 ## Download a model from huggingface
 
-> [!TIP]  
+> [!TIP]
 > Downloading on your local machine and transferring to TACC with rsync/scp proves to be much faster than downloading on TACC directly.
 
 ```bash
@@ -153,7 +153,7 @@ $ squeue -u asehgal
              JOBID   PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
 ```
 
-> [!NOTE]  
+> [!NOTE]
 > The rest of this README is sourced from the [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference) project.
 
 
