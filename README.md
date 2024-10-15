@@ -1,36 +1,37 @@
-# TACC Inference: Easy inference on Slurm clusters
-This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the TACC cluster environment**. 
+# TACC Inference: Easy Inference on Slurm Clusters
 
-> [!Note]  
-> TACC-inference is a fork of  [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference). This is also a work in progress. Make sure to read the 
+This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the TACC cluster environment**.
+
+> [!Note]
+> TACC Inference is a fork of [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference). This is a work in progress.
 
 # Installation
 
-Clone this repo and install the pip package.
+Clone this repository and install the package via `pip`:
+
 ```bash
 # I'm using miniconda; feel free to use your favourite package manager.
 $ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O $WORK/bin/miniconda3/miniconda.sh
 $ bash $WORK/bin/miniconda3/miniconda.sh -u -p $WORK/bin/miniconda3
-# Install the tacc-inf package
+# Install tacc-inf package
 (base) $ pip install tacc-inf
 (base) $ tacc-inf --help
 ```
 
-Or alternatively if you wish to make changes to the tacc-inf package (highly likely for any non-trivial application):
-```
+Alternatively, if you intend to modify the `tacc-inf` package:
+
+```bash
 (base) $ git clone <this repo>
 (base) $ cd <repo directory>
 (base) $ pip install .
 (base) $ tacc-inf --help
 ```
 
+## Install vLLM Singularity Container
 
-## Install vLLM Singularity container. 
+Rather than installing vLLM directly on TACC, we run vLLM via a Singularity container. Learn how TACC integrates with Singularity containers [here](https://containers-at-tacc.readthedocs.io/en/latest/singularity/01.singularity_basics.html). You have three options to install the container on `vista` (`aarch64` microarchitecture; GH100 GPUs):
 
-We won't directly install vLLM on TACC but rather run vLLM through a singularity container. This document explains how TACC interfaces with singularity [containers-at-tacc.readthedocs.io](https://containers-at-tacc.readthedocs.io/en/latest/singularity/01.singularity_basics.html). To get this container you have 3 options:
-
-
-### Option 1: Get precompiled container from SLURM
+### Option 1: Use a Precompiled Container
 
 ```bash
 # Option 1: Get atharva's vLLM Docker container.
@@ -39,15 +40,15 @@ $ ls /home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch
 $ cp /home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch64.sif static/llm-train-serve_aarch64.sif
 ```
 
-### Options 2: Build the docker container yourself
+### Option 2: Build the Docker Container Yourself
 
 ```bash
 # Option 2: Make the docker container yourself.
 $ cd static/
-# commission a node for 20 minutes
+# Commission a node for 20 minutes.
 $ idev -p gh-dev -N 1 -n 1 -t 00:20:00
 $ module load tacc-apptainer
-# build the apptainer config from the llm-train-serve github (build for GH200 with an aarch64 microarchitecture but works for our machine as well)
+# Build the apptainer config from the llm-train-serve github (build for GH200 with an aarch64 microarchitecture but works for vista)
 $ apptainer build llm-train-serve_aarch64.sif docker://ghcr.io/abacusai/gh200-llm/llm-train-serve@sha256:4ba3de6b19e8247ce5d351bf7dd41aa41bb3bffe8c790b7a2f4077af74c1b4ab
 # Confirm that the SIF file file is in $WORK/tacc-inference/static with this exact name.
 $ ls $WORK/tacc-inference/static
@@ -56,37 +57,36 @@ llm-train-serve_aarch64.sif
 $ logout
 ```
 
-### Options 3: Install vLLM from scratch
+### Option 3: Install vLLM from Scratch
 
-I have no experience using this method. You also might need to change the `*.slurm` files. I cannot provide much assistance here.
+This method is not well-tested. You may need to adjust the `*.slurm` files if you proceed. I cannot guarantee that this will work.
 
 ```bash
 # Option 3: Compile your own version of vLLM
 # https://docs.vllm.ai/en/stable/getting_started/installation.html#use-an-existing-pytorch-installation
 # Don't use the conda environment.
 $ conda deactivate
-# commission a node for 40 minutes as it might take longer
+# Commission a node for 40 minutes as it might take longer.
 $ idev -p gh-dev -N 1 -n 1 -t 00:40:00
-$ module load gcc/14.2.0  cuda/12.5
+$ module load gcc/14.2.0 cuda/12.5
 $ module load python3
 $ python3 -m venv $WORK/tacc-inference/vllm_env
 $ source activate $WORK/tacc-inference/vllm_env
-# get PyTorch compiled for aarch64
+# Install PyTorch for aarch64.
 (vllm_env) $ pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu124
-# Download, Setup, and Build the vLLM repo.
+# Download, setup, and build vLLM.
 (vllm_env) $ git clone https://github.com/vllm-project/vllm.git
 (vllm_env) $ cd vllm
 (vllm_env) $ python use_existing_torch.py
 (vllm_env) $ pip install -r requirements-build.txt
 (vllm_env) $ pip install -e . --no-build-isolation
 (vllm_env) $ pip install tacc-inference
-# Integrate the source activate vllm_env call in the vllm.slurm files. 
+# Update `*.slurm` to use source activate $WORK/tacc-inference/vllm_env.
 ```
 
+## Download a Model from Hugging Face
 
-## Download a model from huggingface
-
-> [!TIP]  
+> [!TIP]
 > Downloading on your local machine and transferring to TACC with rsync/scp proves to be much faster than downloading on TACC directly.
 
 ```bash
@@ -104,7 +104,8 @@ $ mkdir -p $WORK/tacc-inference/model-weights/Meta-Llama-3.1-8B-Instruct/
 $ huggingface-cli download meta-llama/Llama-3.1-8B-Instruct --local-dir $WORK/tacc-inference/model-weights/Meta-Llama-3.1-8B-Instruct/
 ```
 
-## Launch an inference server
+## Launch an Inference Server
+
 We will use the Llama 3.1 model as example, to launch an OpenAI compatible inference server for `Meta-Llama-3.1-8B-Instruct`, run:
 ```bash
 $ tacc-inf launch Meta-Llama-3.1-8B-Instruct --time 00:10:00
@@ -153,7 +154,7 @@ $ squeue -u asehgal
              JOBID   PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
 ```
 
-> [!NOTE]  
+> [!NOTE]
 > The rest of this README is sourced from the [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference) project.
 
 
