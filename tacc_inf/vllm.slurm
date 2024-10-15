@@ -17,10 +17,10 @@ echo "http://${hostname}:${vllm_port_number}/v1" > ${VLLM_BASE_URL_FILENAME}
 
 # Activate vllm venv
 if [ "$VENV_BASE" = "apptainer" ]; then
-    export SINGULARITY_IMAGE=$WORK/vista/tacc-inference/static/tacc_inf.sif
+    export SINGULARITY_IMAGE=/home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch64.sif
     module load tacc-apptainer
     apptainer exec $SINGULARITY_IMAGE ray stop
-    apptainer exec --nv --bind /model-weights:/model-weights $SINGULARITY_IMAGE \
+    apptainer exec --nv --bind $WORK/model-weights:/model-weights $SINGULARITY_IMAGE \
     python -m vllm.entrypoints.openai.api_server \
     --model ${VLLM_MODEL_WEIGHTS} \
     --served-model-name ${JOB_NAME} \
@@ -30,7 +30,8 @@ if [ "$VENV_BASE" = "apptainer" ]; then
     --dtype ${VLLM_DATA_TYPE} \
     --max-logprobs ${VLLM_MAX_LOGPROBS} \
     --trust-remote-code \
-    --max-model-len ${VLLM_MAX_MODEL_LEN}
+    --max-model-len ${VLLM_MAX_MODEL_LEN} \
+    --env CUDA_HOME=/usr/local/cuda,LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/cuda/compat/lib.real/"
 else
     source ${VENV_BASE}/bin/activate
     python3 -m vllm.entrypoints.openai.api_server \
