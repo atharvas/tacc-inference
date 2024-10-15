@@ -1,27 +1,150 @@
-# Vector Inference: Easy inference on Slurm clusters
-This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the Vector Institute cluster environment**. To adapt to other environments, update [`launch_server.sh`](vec_inf/launch_server.sh), [`vllm.slurm`](vec_inf/vllm.slurm), [`multinode_vllm.slurm`](vec_inf/multinode_vllm.slurm) and [`models.csv`](vec_inf/models/models.csv) accordingly.
+# TACC Inference: Easy inference on Slurm clusters
+This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the ~~Vector Institute~~ TACC cluster environment**. 
+
+All credits go to the authors of `https://github.com/VectorInstitute/vector-inference`.
 
 ## Installation
-If you are using the Vector cluster environment, and you don't need any customization to the inference server environment, run the following to install package:
+
+Clone this repo and install the pip package. I can register this with pypi if there is enough interest.
 ```bash
-pip install vec-inf
+# I'm using miniconda; feel free to use your favourite package manager.
+# I'm assuming you've already made the directories. Use `mkdir -p <name>` otherwise
+$ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O $WORK/bin/miniconda3/miniconda.sh
+$ bash $WORK/bin/miniconda3/miniconda.sh -u -p $WORK/bin/miniconda3
+(base) $ git clone <this repo>
+(base) $ cd <repo directory>
+(base) $ pip install .
+(base) $ tacc-inf --help
 ```
-Otherwise, we recommend using the provided [`Dockerfile`](Dockerfile) to set up your own environment with the package
+
+
+## Install vLLM Singularity container. 
+
+
+We run vLLM through a self-contained singularity container. There is a great document explaining how TACC interfaces with singularity [here](https://containers-at-tacc.readthedocs.io/en/latest/singularity/01.singularity_basics.html). To make this container, follow these steps:
+
+
+```bash
+# Option 1: Get atharva's vLLM Docker container.
+$ ls /home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch64.sif
+# <should echo the path; if it gives an error I haven't set the permissions correctly and you should open a github issue.>
+$ cp /home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch64.sif static/llm-train-serve_aarch64.sif
+
+# Option 2: Make the docker container yourself.
+$ cd static/
+# comission a node for 20 minutes
+$ idev -p gh-dev -N 1 -n 1 -t 00:20:00
+$ module load tacc-apptainer
+# build the apptainer config from the llm-train-serve github (build for GH200 with an aarch64 microarchitecture but works for our machine as well)
+$ apptainer build llm-train-serve_aarch64.sif docker://ghcr.io/abacusai/gh200-llm/llm-train-serve@sha256:4ba3de6b19e8247ce5d351bf7dd41aa41bb3bffe8c790b7a2f4077af74c1b4ab
+# Confirm that the SIF file file is in $WORK/tacc-inference/static with this exact name.
+$ ls $WORK/tacc-inference/static
+llm-train-serve_aarch64.sif
+# Free up the dev compute node.
+$ logout
+
+# Option 3: Compile your own version of vLLM
+# I have no experience using this. You might need to change the vllm.slurm files and I cannot provide much assistance here.
+# https://docs.vllm.ai/en/stable/getting_started/installation.html#use-an-existing-pytorch-installation
+# Don't use the conda environment.
+$ conda deactivate
+# comission a node for 40 minutes as it might take longer
+$ idev -p gh-dev -N 1 -n 1 -t 00:40:00
+$ module load gcc/14.2.0  cuda/12.5
+$ module load python3
+$ python3 -m venv $WORK/tacc-inference/vllm_env
+$ source activate $WORK/tacc-inference/vllm_env
+# get PyTorch compiled for aarch64
+(vllm_env) $ pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu124
+# Download, Setup, and Build the vLLM repo.
+(vllm_env) $ git clone https://github.com/vllm-project/vllm.git
+(vllm_env) $ cd vllm
+(vllm_env) $ python use_existing_torch.py
+(vllm_env) $ pip install -r requirements-build.txt
+(vllm_env) $ pip install -e . --no-build-isolation
+(vllm_env) $ pip install tacc-inference
+# Integrate the source activate vllm_env call in the vllm.slurm files. 
+```
+
+
+## Download a model
+
+> [!TIP]  
+> Downloading on your local machine and transferring to TACC with rsync/scp proves to be much faster than downloading on TACC directly.
+
+```bash
+# The vllm.slurm script expects models to be here
+$ mkdir -p $WORK/tacc-inference/model-weights
+# We're going to download the model from huggingface.
+$ pip install huggingface-hub
+$ huggingface-cli login
+# Assume we want to download and use Meta-Llama-3.1-8B-Instruct
+# First, verify that models.csv contains this model
+$ cat tacc_inf/models/models.csv | grep Meta-Llama-3.1-8B-Instruct
+# Make a folder to hold these model weights
+$ mkdir -p $WORK/tacc-inference/model-weights/Meta-Llama-3.1-8B-Instruct/
+# Download from huggingface.
+$ huggingface-cli download meta-llama/Llama-3.1-8B-Instruct --local-dir $WORK/tacc-inference/model-weights/Meta-Llama-3.1-8B-Instruct/
+```
 
 ## Launch an inference server
 We will use the Llama 3.1 model as example, to launch an OpenAI compatible inference server for Meta-Llama-3.1-8B-Instruct, run:
 ```bash
-vec-inf launch Meta-Llama-3.1-8B-Instruct
+tacc-inf launch Meta-Llama-3.1-8B-Instruct --time 00:10:00
+Ignoring Line `'
+Ignoring Line `-----------------------------------------------------------------'
+Ignoring Line `          Welcome to the Vista Supercomputer                       '
+Ignoring Line `-----------------------------------------------------------------'
+Ignoring Line `'
+Ignoring Line `No reservation for this job'
+Ignoring Line `--> Verifying valid submit host (login1)...OK'
+Ignoring Line `--> Verifying valid jobname...OK'
+Ignoring Line `--> Verifying valid ssh keys...OK'
+Ignoring Line `--> Verifying access to desired queue (gh-dev)...OK'
+Ignoring Line `--> Checking available allocation (CGAI24022)...OK'
+Ignoring Line `--> Quotas are not currently enabled for filesystem /home1/08277/asehgal...OK'
+Ignoring Line `--> Verifying that quota for filesystem /work/08277/asehgal/vista is at 23.14% allocated...OK'
+┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Job Config    ┃ Value                      ┃
+┡━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Slurm Job ID  │ 51431                      │
+│ Job Name      │ Meta-Llama-3.1-8B-Instruct │
+│ Partition     │ gh-dev                     │
+│ Num Nodes     │ 1                          │
+│ GPUs per Node │ 1                          │
+│ QOS           │ m2                         │
+│ Walltime      │ 00:10:00                   │
+│ Data Type     │ auto                       │
+└───────────────┴────────────────────────────┘
+$ squeue -u asehgal
+             JOBID   PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
+             51431      gh-dev Meta-Lla  asehgal  R       0:30      1 c609-002
+$ tail /home1/08277/asehgal/.tacc-inf-logs/Meta-Llama-3.1/Meta-Llama-3.1-8B-Instruct.51431.out
+INFO 10-15 08:58:41 launcher.py:28] Route: /version, Methods: GET
+INFO 10-15 08:58:41 launcher.py:28] Route: /v1/chat/completions, Methods: POST
+INFO 10-15 08:58:41 launcher.py:28] Route: /v1/completions, Methods: POST
+INFO 10-15 08:58:41 launcher.py:28] Route: /v1/embeddings, Methods: POST
+INFO 10-15 08:58:41 launcher.py:33] Launching Uvicorn with --limit_concurrency 32765. To avoid this limit at the expense of performance run with --disable-frontend-multiprocessing
+INFO 10-15 08:58:51 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 08:59:01 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 08:59:11 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 08:59:21 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 08:59:31 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+$ tacc-inf shutdown 51431
+Shutting down model with Slurm Job ID: 51431
+$ squeue -u asehgal
+             JOBID   PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
 ```
-You should see an output like the following:
 
-<img width="400" alt="launch_img" src="https://github.com/user-attachments/assets/557eb421-47db-4810-bccd-c49c526b1b43">
+> [!NOTE]  
+> The rest of the README is from the [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference) README.
 
-The model would be launched using the [default parameters](vec_inf/models/models.csv), you can override these values by providing additional options, use `--help` to see the full list. You can also launch your own customized model as long as the model architecture is [supported by vLLM](https://docs.vllm.ai/en/stable/models/supported_models.html), you'll need to specify all model launching related options to run a successful run.
+
+The model would be launched using the [default parameters](tacc_inf/models/models.csv), you can override these values by providing additional options, use `--help` to see the full list. You can also launch your own customized model as long as the model architecture is [supported by vLLM](https://docs.vllm.ai/en/stable/models/supported_models.html), you'll need to specify all model launching related options to run a successful run.
 
 You can check the inference server status by providing the Slurm job ID to the `status` command:
 ```bash
-vec-inf status 13014393
+tacc-inf status 13014393
 ```
 
 You should see an output like the following:
@@ -40,20 +163,20 @@ Note that the base URL is only available when model is in `READY` state, and if 
 
 Finally, when you're finished using a model, you can shut it down by providing the Slurm job ID:
 ```bash
-vec-inf shutdown 13014393
+tacc-inf shutdown 13014393
 
 > Shutting down model with Slurm Job ID: 13014393
 ```
 
 You call view the full list of available models by running the `list` command:
 ```bash
-vec-inf list
+tacc-inf list
 ```
 <img width="1200" alt="list_img" src="https://github.com/user-attachments/assets/a4f0d896-989d-43bf-82a2-6a6e5d0d288f">
 
 You can also view the default setup for a specific supported model by providing the model name, for example `Meta-Llama-3.1-70B-Instruct`:
 ```bash
-vec-inf list Meta-Llama-3.1-70B-Instruct
+tacc-inf list Meta-Llama-3.1-70B-Instruct
 ```
 <img width="400" alt="list_model_img" src="https://github.com/user-attachments/assets/5dec7a33-ba6b-490d-af47-4cf7341d0b42">
 

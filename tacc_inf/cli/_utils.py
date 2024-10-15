@@ -28,7 +28,7 @@ def read_slurm_log(
     Get the directory of a model
     """
     if not log_dir:
-        models_dir = os.path.join(os.path.expanduser("~"), ".vec-inf-logs")
+        models_dir = os.path.join(os.path.expanduser("~"), ".tacc-inf-logs")
 
         for dir in sorted(os.listdir(models_dir), key=len, reverse=True):
             if dir in slurm_job_name:

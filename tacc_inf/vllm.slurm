@@ -1,13 +1,13 @@
-#!/bin/bash
+#!/bin/bash -i
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
 
 # Load CUDA, change to the cuda version on your environment if different
-module load cuda-12.3
+module load gcc/14.2.0 cuda/12.5
+module load python3/3.11.8
 nvidia-smi
 
-source ${SRC_DIR}/find_port.sh
 
+source ${SRC_DIR}/find_port.sh
 # Write server url to file
 hostname=${SLURMD_NODENAME}
 vllm_port_number=$(find_available_port $hostname 8080 65535)
@@ -16,13 +16,12 @@ echo "Server address: http://${hostname}:${vllm_port_number}/v1"
 echo "http://${hostname}:${vllm_port_number}/v1" > ${VLLM_BASE_URL_FILENAME}
 
 # Activate vllm venv
-if [ "$VENV_BASE" = "singularity" ]; then
-    export SINGULARITY_IMAGE=/projects/aieng/public/vector-inference_0.3.0.sif
-    export VLLM_NCCL_SO_PATH=/vec-inf/nccl/libnccl.so.2.18.1
-    module load singularity-ce/3.8.2
-    singularity exec $SINGULARITY_IMAGE ray stop
-    singularity exec --nv --bind /model-weights:/model-weights $SINGULARITY_IMAGE \
-    python3.10 -m vllm.entrypoints.openai.api_server \
+if [ "$VENV_BASE" = "apptainer" ]; then
+    export SINGULARITY_IMAGE=/home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch64.sif
+    module load tacc-apptainer
+    apptainer exec $SINGULARITY_IMAGE ray stop
+    apptainer exec --nv --bind $WORK/tacc-inference/model-weights:/model-weights $SINGULARITY_IMAGE \
+    python -m vllm.entrypoints.openai.api_server \
     --model ${VLLM_MODEL_WEIGHTS} \
     --served-model-name ${JOB_NAME} \
     --host "0.0.0.0" \

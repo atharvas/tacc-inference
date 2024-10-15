@@ -6,14 +6,14 @@ from rich.columns import Columns
 from rich.console import Console
 from rich.panel import Panel
 
-import vec_inf.cli._utils as utils
+import tacc_inf.cli._utils as utils
 
 CONSOLE = Console()
 
 
 @click.group()
 def cli():
-    """Vector Inference CLI"""
+    """TACC Inference CLI (forked from Vector Inference CLI)"""
     pass
 
 
@@ -57,7 +57,7 @@ def cli():
 @click.option(
     "--log-dir",
     type=str,
-    help="Path to slurm log directory, default to .vec-inf-logs in home directory",
+    help="Path to slurm log directory, default to .tacc-inf-logs in home directory",
 )
 @click.option(
     "--json-mode",
@@ -115,9 +115,12 @@ def launch(
     output_dict = {"slurm_job_id": slurm_job_id}
 
     for line in output_lines:
-        key, value = line.split(": ")
-        table.add_row(key, value)
-        output_dict[key.lower().replace(" ", "_")] = value
+        try:
+            key, value = line.split(": ")
+            table.add_row(key, value)
+            output_dict[key.lower().replace(" ", "_")] = value
+        except Exception as e:
+            print(f"Ignoring Line `{line}'")
 
     if json_mode:
         click.echo(output_dict)

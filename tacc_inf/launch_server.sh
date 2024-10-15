@@ -42,7 +42,7 @@ export VLLM_MAX_MODEL_LEN=$max_model_len
 export VLLM_MAX_LOGPROBS=$vocab_size
 # For custom models, the following are set to default if not specified
 export VLLM_DATA_TYPE="auto"
-export VENV_BASE="singularity"
+export VENV_BASE="base"
 export LOG_DIR="default"
 # Pipeline parallelism is disabled and can only be enabled if specified in models.csv as this is an experimental feature
 export PIPELINE_PARALLELISM="false"
@@ -67,7 +67,7 @@ fi
 # Slurm job configuration
 export JOB_NAME="$MODEL_FAMILY-$MODEL_VARIANT"
 if [ "$LOG_DIR" = "default" ]; then
-    export LOG_DIR="$HOME/.vec-inf-logs/$MODEL_FAMILY"
+    export LOG_DIR="$HOME/.tacc-inf-logs/$MODEL_FAMILY"
 fi
 mkdir -p $LOG_DIR
 
@@ -79,7 +79,10 @@ export VLLM_BASE_URL_FILENAME="${MODEL_DIR}/.${JOB_NAME}_url"
 
 # Variables specific to your working environment, below are examples for the Vector cluster
 export VLLM_MODEL_WEIGHTS="/model-weights/$JOB_NAME"
-export LD_LIBRARY_PATH="/scratch/ssd001/pkgs/cudnn-11.7-v8.5.0.96/lib/:/scratch/ssd001/pkgs/cuda-11.7/targets/x86_64-linux/lib/"
+# This is a hack for `vista.tacc.utexas.edu`. I ran:
+# $ module load cuda/11.8
+# $ echo $LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="/opt/apps/ucx/1.17.0/lib:/opt/apps/nvidia24/cuda12/openmpi/5.0.5/lib:/home1/apps/nvidia/Linux_aarch64/24.7/cuda/12.5/extras/CUPTI/lib64:/home1/apps/nvidia/Linux_aarch64/24.7/cuda/12.5/lib64:/home1/apps/nvidia/Linux_aarch64/24.7/compilers/extras/qd/lib:/home1/apps/nvidia/Linux_aarch64/24.7/compilers/lib"
 
 
 # ================================ Validate Inputs & Launch Server =================================
@@ -114,9 +117,18 @@ fi
 sbatch --job-name $JOB_NAME \
     --partition $JOB_PARTITION \
     --nodes $NUM_NODES \
-    --gres gpu:$NUM_GPUS \
-    --qos $QOS \
     --time $WALLTIME \
     --output $LOG_DIR/$JOB_NAME.%j.out \
     --error $LOG_DIR/$JOB_NAME.%j.err \
     $SRC_DIR/${is_special}vllm.slurm
+
+
+# echo sbatch --job-name $JOB_NAME \
+#     --partition $JOB_PARTITION \
+#     --nodes $NUM_NODES \
+#     --gres gpu:$NUM_GPUS \
+#     --qos $QOS \
+#     --time $WALLTIME \
+#     --output $LOG_DIR/$JOB_NAME.%j.out \
+#     --error $LOG_DIR/$JOB_NAME.%j.err \
+#     $SRC_DIR/${is_special}vllm.slurm

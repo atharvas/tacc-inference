@@ -10,11 +10,11 @@ nvidia-smi
 
 source ${SRC_DIR}/find_port.sh
 
-if [ "$VENV_BASE" = "singularity" ]; then
-    export SINGULARITY_IMAGE=/projects/aieng/public/vector-inference_0.3.0.sif
+if [ "$VENV_BASE" = "apptainer" ]; then
+    export SINGULARITY_IMAGE=/home1/08277/asehgal/work/vista/tacc-inference/static/llm-train-serve_aarch64.sif
     export VLLM_NCCL_SO_PATH=/vec-inf/nccl/libnccl.so.2.18.1
-    module load singularity-ce/3.8.2
-    singularity exec $SINGULARITY_IMAGE ray stop
+    module load tacc-apptainer
+    apptainer exec $SINGULARITY_IMAGE ray stop
 fi
 
 # Getting the node names
@@ -33,9 +33,9 @@ export ip_head
 echo "IP Head: $ip_head"
 
 echo "Starting HEAD at $head_node"
-if [ "$VENV_BASE" = "singularity" ]; then
+if [ "$VENV_BASE" = "apptainer" ]; then
     srun --nodes=1 --ntasks=1 -w "$head_node" \
-        singularity exec --nv --bind /model-weights:/model-weights $SINGULARITY_IMAGE \
+        apptainer exec --nv --bind $WORK/tacc-inference/model-weights:/model-weights $SINGULARITY_IMAGE \
         ray start --head --node-ip-address="$head_node_ip" --port=$head_node_port \
         --num-cpus "${SLURM_CPUS_PER_TASK}" --num-gpus "${NUM_GPUS}" --block &
 else
@@ -54,9 +54,9 @@ worker_num=$((SLURM_JOB_NUM_NODES - 1))
 for ((i = 1; i <= worker_num; i++)); do
     node_i=${nodes_array[$i]}
     echo "Starting WORKER $i at $node_i"
-    if [ "$VENV_BASE" = "singularity" ]; then
+    if [ "$VENV_BASE" = "apptainer" ]; then
         srun --nodes=1 --ntasks=1 -w "$node_i" \
-            singularity exec --nv --bind /model-weights:/model-weights $SINGULARITY_IMAGE \
+            apptainer exec --nv --bind $WORK/tacc-inference/model-weights:/model-weights $SINGULARITY_IMAGE \
             ray start --address "$ip_head" \
             --num-cpus "${SLURM_CPUS_PER_TASK}" --num-gpus "${NUM_GPUS}" --block &
     else
@@ -83,9 +83,9 @@ else
 fi
 
 # Activate vllm venv
-if [ "$VENV_BASE" = "singularity" ]; then
-    singularity exec --nv --bind /model-weights:/model-weights $SINGULARITY_IMAGE \
-    python3.10 -m vllm.entrypoints.openai.api_server \
+if [ "$VENV_BASE" = "apptainer" ]; then
+    apptainer exec --nv --bind $WORK/tacc-inference/model-weights:/model-weights $SINGULARITY_IMAGE \
+    python -m vllm.entrypoints.openai.api_server \
     --model ${VLLM_MODEL_WEIGHTS} \
     --served-model-name ${JOB_NAME} \
     --host "0.0.0.0" \
