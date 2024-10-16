@@ -52,18 +52,22 @@ def is_server_running(
     slurm_job_name: str, slurm_job_id: int, log_dir: Optional[str]
 ) -> Union[str, tuple[str, str]]:
     """
-    Check if a model is ready to serve requests
+    Check if a model is ready to serve requests;
+    This check is a weaker version of the check in the vec-inf library.
     """
     log_content = read_slurm_log(slurm_job_name, slurm_job_id, "err", log_dir)
     if isinstance(log_content, str):
         return log_content
 
-    status = "LAUNCHING"
+    error_msg = ""
     for line in log_content:
         if "error" in line.lower():
-            status = ("FAILED", line.strip("\n"))
+            error_msg = line.strip("\n")
         if MODEL_READY_SIGNATURE in line:
             return "RUNNING"
+
+    if len(error_msg):
+        return ("FAILED", error_msg)
     return "LAUNCHING"
 
 
