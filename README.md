@@ -178,6 +178,33 @@ $ squeue -u asehgal
              JOBID   PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
 ```
 
+# Overall Structure
+
+`tacc-inf` touches the following files and directories:
+```tree
+$HOME/.tacc-inf-logs/                   # Logging directory for TACC
+└── Meta-Llama-3.1
+    ├── Meta-Llama-3.1-8B-Instruct.52126.err
+    └── Meta-Llama-3.1-8B-Instruct.52126.out
+
+$WORK/
+├── models
+├── model-weights                        # Consult "Download a Model from Hugging Face" section
+│   └── Meta-Llama-3.1-8B-Instruct
+├── static                               # Consult "Install vLLM Singularity Container" section
+│   └── llm-train-serve_aarch64.sif
+└── tacc-inference                       # (Optional) If you're modifying the package locally
+    ├── examples
+    ├── poetry.lock
+    ├── profile
+    ├── pyproject.toml
+    ├── README.md
+    ├── tacc_inf
+    └── venv.sh
+```
+
+
+
 > [!NOTE]
 > The rest of this README is sourced from the [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference) project.
 
