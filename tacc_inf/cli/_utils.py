@@ -58,9 +58,10 @@ def is_server_running(
     if isinstance(log_content, str):
         return log_content
 
+    status = "LAUNCHING"
     for line in log_content:
         if "error" in line.lower():
-            return ("FAILED", line.strip("\n"))
+            status = ("FAILED", line.strip("\n"))
         if MODEL_READY_SIGNATURE in line:
             return "RUNNING"
     return "LAUNCHING"

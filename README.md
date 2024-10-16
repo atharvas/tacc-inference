@@ -2,12 +2,18 @@
 
 This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the TACC cluster environment**.
 
+`tacc-inf` focuses on providing a common API for the following tasks:
+- Setup a server for a huggingface model that fits on a single `vista` GH100 compute node. 
+- Setup a server for a huggingface model that needs to be distributed across multiple GH100s (`Meta-Llama-3.1-405B-Instruct`) and requires commissioning multiple GH100 compute nodes.
+- Keeping track of concurrent servers on multiple compute nodes for LLM Agent based workflows.
+
+
 > [!Note]
-> TACC Inference is a fork of [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference). This is a work in progress.
+> TACC Inference is a fork of [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference). We highly recommend reading through the  `vector-inference` documentation as well.
 
 # Installation
 
-Clone this repository and install the package via `pip`:
+Install the package via `pip`:
 
 ```bash
 # I'm using miniconda; feel free to use your favourite package manager.
@@ -50,8 +56,8 @@ $ idev -p gh-dev -N 1 -n 1 -t 00:20:00
 $ module load tacc-apptainer
 # Build the apptainer config from the llm-train-serve github (build for GH200 with an aarch64 microarchitecture but works for vista)
 $ apptainer build llm-train-serve_aarch64.sif docker://ghcr.io/abacusai/gh200-llm/llm-train-serve@sha256:4ba3de6b19e8247ce5d351bf7dd41aa41bb3bffe8c790b7a2f4077af74c1b4ab
-# Confirm that the SIF file file is in $WORK/tacc-inference/static with this exact name.
-$ ls $WORK/tacc-inference/static
+# Confirm that the SIF file file is in $WORK/static with this exact name.
+$ ls $WORK/static
 llm-train-serve_aarch64.sif
 # Free up the dev compute node.
 $ logout
@@ -70,8 +76,8 @@ $ conda deactivate
 $ idev -p gh-dev -N 1 -n 1 -t 00:40:00
 $ module load gcc/14.2.0 cuda/12.5
 $ module load python3
-$ python3 -m venv $WORK/tacc-inference/vllm_env
-$ source activate $WORK/tacc-inference/vllm_env
+$ python3 -m venv $WORK/vllm_env
+$ source activate $WORK/vllm_env
 # Install PyTorch for aarch64.
 (vllm_env) $ pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu124
 # Download, setup, and build vLLM.
@@ -81,7 +87,7 @@ $ source activate $WORK/tacc-inference/vllm_env
 (vllm_env) $ pip install -r requirements-build.txt
 (vllm_env) $ pip install -e . --no-build-isolation
 (vllm_env) $ pip install tacc-inference
-# Update `*.slurm` to use source activate $WORK/tacc-inference/vllm_env.
+# Update `*.slurm` to use source activate $WORK/vllm_env.
 ```
 
 ## Download a Model from Hugging Face
@@ -91,7 +97,7 @@ $ source activate $WORK/tacc-inference/vllm_env
 
 ```bash
 # The vllm.slurm script expects models to be here
-$ mkdir -p $WORK/tacc-inference/model-weights
+$ mkdir -p $WORK/model-weights
 # We're going to download the model from huggingface.
 $ pip install huggingface-hub
 $ huggingface-cli login
@@ -99,16 +105,16 @@ $ huggingface-cli login
 # First, verify that models.csv contains this model
 $ cat tacc_inf/models/models.csv | grep Meta-Llama-3.1-8B-Instruct
 # Make a folder to hold these model weights
-$ mkdir -p $WORK/tacc-inference/model-weights/Meta-Llama-3.1-8B-Instruct/
+$ mkdir -p $WORK/model-weights/Meta-Llama-3.1-8B-Instruct/
 # Download from huggingface.
-$ huggingface-cli download meta-llama/Llama-3.1-8B-Instruct --local-dir $WORK/tacc-inference/model-weights/Meta-Llama-3.1-8B-Instruct/
+$ huggingface-cli download meta-llama/Llama-3.1-8B-Instruct --local-dir $WORK/model-weights/Meta-Llama-3.1-8B-Instruct/
 ```
 
 ## Launch an Inference Server
 
 We will use the Llama 3.1 model as example, to launch an OpenAI compatible inference server for `Meta-Llama-3.1-8B-Instruct`, run:
 ```bash
-$ tacc-inf launch Meta-Llama-3.1-8B-Instruct --time 00:10:00
+ tacc-inf launch Meta-Llama-3.1-8B-Instruct --time 00:10:00
 Ignoring Line `'
 Ignoring Line `-----------------------------------------------------------------'
 Ignoring Line `          Welcome to the Vista Supercomputer                       '
@@ -121,11 +127,11 @@ Ignoring Line `--> Verifying valid ssh keys...OK'
 Ignoring Line `--> Verifying access to desired queue (gh-dev)...OK'
 Ignoring Line `--> Checking available allocation (CGAI24022)...OK'
 Ignoring Line `--> Quotas are not currently enabled for filesystem /home1/08277/asehgal...OK'
-Ignoring Line `--> Verifying that quota for filesystem /work/08277/asehgal/vista is at 23.14% allocated...OK'
+Ignoring Line `--> Verifying that quota for filesystem /work/08277/asehgal/vista is at 12.85% allocated...OK'
 ┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ Job Config    ┃ Value                      ┃
 ┡━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ Slurm Job ID  │ 51431                      │
+│ Slurm Job ID  │ 52126                      │
 │ Job Name      │ Meta-Llama-3.1-8B-Instruct │
 │ Partition     │ gh-dev                     │
 │ Num Nodes     │ 1                          │
@@ -136,20 +142,38 @@ Ignoring Line `--> Verifying that quota for filesystem /work/08277/asehgal/vista
 └───────────────┴────────────────────────────┘
 $ squeue -u asehgal
              JOBID   PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
-             51431      gh-dev Meta-Lla  asehgal  R       0:30      1 c609-002
-$ tail /home1/08277/asehgal/.tacc-inf-logs/Meta-Llama-3.1/Meta-Llama-3.1-8B-Instruct.51431.out
-INFO 10-15 08:58:41 launcher.py:28] Route: /version, Methods: GET
-INFO 10-15 08:58:41 launcher.py:28] Route: /v1/chat/completions, Methods: POST
-INFO 10-15 08:58:41 launcher.py:28] Route: /v1/completions, Methods: POST
-INFO 10-15 08:58:41 launcher.py:28] Route: /v1/embeddings, Methods: POST
-INFO 10-15 08:58:41 launcher.py:33] Launching Uvicorn with --limit_concurrency 32765. To avoid this limit at the expense of performance run with --disable-frontend-multiprocessing
-INFO 10-15 08:58:51 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
-INFO 10-15 08:59:01 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
-INFO 10-15 08:59:11 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
-INFO 10-15 08:59:21 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
-INFO 10-15 08:59:31 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
-$ tacc-inf shutdown 51431
-Shutting down model with Slurm Job ID: 51431
+             52126      gh-dev Meta-Lla  asehgal  R       0:23      1 c609-001
+$ tacc-inf status 52126
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Job Status   ┃ Value                      ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Model Name   │ Meta-Llama-3.1-8B-Instruct │
+│ Model Status │ LAUNCHING                  │
+│ Base URL     │ UNAVAILABLE                │
+└──────────────┴────────────────────────────┘
+$ tacc-inf status 52126
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Job Status   ┃ Value                      ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Model Name   │ Meta-Llama-3.1-8B-Instruct │
+│ Model Status │ READY                      │
+│ Base URL     │ http://c609-001:8080/v1    │
+└──────────────┴────────────────────────────┘
+$ curl http://c609-001:8080/v1/completions -H "Content-Type: application/json"   -H "Authorization: Bearer token-abc123adfafaf"   -d '{"model": "Meta-Llama-3.1-8B-Instruct", "prompt": "Once upon a time,", "max_tokens": 50, "temperature": 0.7}'
+{"id":"cmpl-d8384b7f896c48d991128c74a5712cb1","object":"text_completion","created":1729045295,"model":"Meta-Llama-3.1-8B-Instruct","choices":[{"index":0,"text":" there was a man who lived in a small village nestled in the rolling hills of a far-off land. This man, named Kaito, was a humble and kind soul who spent his days tending to his family's farm. Kaito","logprobs":null,"finish_reason":"length","stop_reason":null,"prompt_logprobs":null}],"usage":{"prompt_tokens":6,"total_tokens":56,"completion_tokens":50}}
+$ tail ~/.tacc-inf-logs/Meta-Llama-3.1/Meta-Llama-3.1-8B-Instruct.52126.out 
+INFO 10-15 21:21:16 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 21:21:26 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 21:21:35 logger.py:36] Received request cmpl-d8384b7f896c48d991128c74a5712cb1-0: prompt: 'Once upon a time,', params: SamplingParams(n=1, best_of=1, presence_penalty=0.0, frequency_penalty=0.0, repetition_penalty=1.0, temperature=0.7, top_p=1.0, top_k=-1, min_p=0.0, seed=None, use_beam_search=False, length_penalty=1.0, early_stopping=False, stop=[], stop_token_ids=[], include_stop_str_in_output=False, ignore_eos=False, max_tokens=50, min_tokens=0, logprobs=None, prompt_logprobs=None, skip_special_tokens=True, spaces_between_special_tokens=True, truncate_prompt_tokens=None), prompt_token_ids: [128000, 12805, 5304, 264, 892, 11], lora_request: None, prompt_adapter_request: None.
+INFO 10-15 21:21:35 async_llm_engine.py:208] Added request cmpl-d8384b7f896c48d991128c74a5712cb1-0.
+INFO 10-15 21:21:35 metrics.py:351] Avg prompt throughput: 0.7 tokens/s, Avg generation throughput: 0.1 tokens/s, Running: 1 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 21:21:35 async_llm_engine.py:176] Finished request cmpl-d8384b7f896c48d991128c74a5712cb1-0.
+INFO:     129.114.16.11:52600 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO 10-15 21:21:46 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 4.5 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 21:21:56 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+INFO 10-15 21:22:06 metrics.py:351] Avg prompt throughput: 0.0 tokens/s, Avg generation throughput: 0.0 tokens/s, Running: 0 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.0%, CPU KV cache usage: 0.0%.
+$ tacc-inf shutdown 52126
+Shutting down model with Slurm Job ID: 52126
 $ squeue -u asehgal
              JOBID   PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)
 ```
