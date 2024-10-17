@@ -9,7 +9,7 @@ This repository provides an easy-to-use solution to run inference servers on [Sl
 
 
 > [!Note]
-> TACC Inference is a fork of [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference). We highly recommend reading through the  `vector-inference` documentation as well.
+> TACC Inference is a fork of [VectorInstitute/vector-inference](https://github.com/VectorInstitute/vector-inference) which was developed at the [Vector Institute](https://vectorinstitute.ai/). We highly recommend reading through the  `vector-inference` documentation as well.
 
 # Installation
 
