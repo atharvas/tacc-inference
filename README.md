@@ -3,7 +3,7 @@
 This repository provides an easy-to-use solution to run inference servers on [Slurm](https://slurm.schedmd.com/overview.html)-managed computing clusters using [vLLM](https://docs.vllm.ai/en/latest/). **All scripts in this repository runs natively on the TACC cluster environment**.
 
 `tacc-inf` focuses on providing a common API for the following tasks:
-- Setup a server for a huggingface model that fits on a single `vista` GH100 compute node. 
+- Setup a server for a huggingface model that fits on a single `vista` GH100 compute node.
 - Setup a server for a huggingface model that needs to be distributed across multiple GH100s (`Meta-Llama-3.1-405B-Instruct`) and requires commissioning multiple GH100 compute nodes.
 - Keeping track of concurrent servers on multiple compute nodes for LLM Agent based workflows.
 
